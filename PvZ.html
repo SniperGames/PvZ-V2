@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plants vs Zombies</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #eaeaea;
+}
+
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 50px;
+}
+
+.game-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 80%;
+  margin-bottom: 20px;
+}
+
+.game-board {
+  width: 80%;
+  height: 400px;
+  background-color: #7c7c7c;
+  position: relative;
+  cursor: default;
+}
+
+#start-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+#sun-counter {
+  font-size: 18px;
+}
+
+#status {
+  font-size: 24px;
+  margin-top: 20px;
+}
+
+.plant {
+  width: 50px;
+  height: 50px;
+  background-color: green; /* Kolor rośliny */
+  position: absolute;
+}
+
+.zombie {
+  width: 50px;
+  height: 80px;
+  background-color: #2b2b2b; /* Kolor zombie */
+  position: absolute;
+}
+
+.peashooter {
+  width: 50px;
+  height: 50px;
+  background-color: #00ff00; /* Kolor peashooter */
+}
+
+.sunflower {
+  width: 50px;
+  height: 50px;
+  background-color: #ffcc00; /* Kolor sunflower */
+}
+
+.wallnut {
+  width: 50px;
+  height: 50px;
+  background-color: #8b4513; /* Kolor wallnut */
+}
+
+.potato-mine {
+  width: 50px;
+  height: 50px;
+  background-color: #8b0000; /* Kolor potato mine */
+}
+
+.shoot-animation {
+  animation: peashooterShoot 0.5s linear;
+}
+
+@keyframes peashooterShoot {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+  <div class="game-panel">
+    <button id="start-button">Zacznij grę</button>
+    <div id="sun-counter">Słońce: 50</div>
+  </div>
+  <div class="game-board"></div>
+  <div id="status"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const startButton = document.getElementById('start-button');
+  const sunCounter = document.getElementById('sun-counter');
+  const gameBoard = document.querySelector('.game-board');
+  const status = document.getElementById('status');
+  const gamePanel = document.querySelector('.game-panel');
+  let sunPoints = 50;
+  let gameStarted = false;
+  let zombieMoveInterval;
+  let killedZombies = 0;
+  const backgroundMusic = new Audio('Modern_Day_First_Wave.mp3');
+
+  startButton.addEventListener('click', startGame);
+
+  function startGame() {
+    if (!gameStarted) {
+      gameStarted = true;
+      startButton.style.display = 'none';
+      status.innerText = '';
+      addPlantButtons();
+      gameBoard.addEventListener('click', placePlant);
+      spawnZombie();
+      playBackgroundMusic();
+    }
+  }
+
+  function addPlantButtons() {
+    const plantButtons = [
+      { type: 'peashooter', cost: 25 },
+      { type: 'sunflower', cost: 50 },
+      { type: 'wallnut', cost: 50 },
+      { type: 'potato-mine', cost: 25 }
+    ];
+
+    plantButtons.forEach(plant => {
+      const button = document.createElement('button');
+      button.innerText = `${plant.type} - ${plant.cost}`;
+      button.addEventListener('click', () => {
+        if (sunPoints >= plant.cost) {
+          sunPoints -= plant.cost;
+          sunCounter.innerText = `Słońce: ${sunPoints}`;
+          selectedPlant = plant.type;
+          status.innerText = `Wybierz miejsce na umieszczenie ${selectedPlant}`;
+        } else {
+          status.innerText = 'Brak wystarczającej ilości słońca';
+        }
+      });
+      gamePanel.appendChild(button);
+    });
+  }
+
+  let selectedPlant = null;
+
+  function placePlant(event) {
+    if (!selectedPlant) return; // Nie rób nic, jeśli nie wybrano rośliny
+
+    const x = event.clientX - gameBoard.getBoundingClientRect().left;
+    const y = event.clientY - gameBoard.getBoundingClientRect().top;
+
+    const plant = document.createElement('div');
+    plant.classList.add('plant', selectedPlant);
+    plant.style.left = `${x - 25}px`; // Centrujemy roślinę na miejscu kliknięcia
+    plant.style.top = `${y - 25}px`; // Centrujemy roślinę na miejscu kliknięcia
+
+    gameBoard.appendChild(plant);
+    sunCounter.innerText = `Słońce: ${sunPoints}`;
+    selectedPlant = null;
+    status.innerText = '';
+  }
+
+  function spawnZombie() {
+    const zombie = document.createElement('div');
+    zombie.classList.add('zombie');
+    gameBoard.appendChild(zombie);
+    let zombiePosition = gameBoard.offsetWidth; // Początkowa pozycja zombie - po prawej stronie planszy
+    zombie.style.left = `${zombiePosition}px`;
+    zombieMoveInterval = setInterval(() => {
+      zombiePosition -= 10; // Przesuń zombie o 10px w lewo
+      zombie.style.left = `${zombiePosition}px`;
+      if (zombiePosition <= 0) {
+        clearInterval(zombieMoveInterval);
+        endGame(false); // Zombie opuściło planszę z lewej strony
+      }
+    }, 1000);
+  }
+
+  function endGame(win) {
+    if (win) {
+      status.innerText = 'Wygrałeś!';
+    } else {
+      status.innerText = 'Przegrałeś!';
+    }
+    const restartButton = document.createElement('button');
+    restartButton.innerText = 'Rozpocznij grę ponownie';
+    restartButton.addEventListener('click', () => {
+      resetGame();
+      startGame();
+    });
+    status.appendChild(restartButton);
+    gameStarted = false;
+    clearInterval(zombieMoveInterval);
+  }
+
+  function resetGame() {
+    sunPoints = 50;
+    sunCounter.innerText = `Słońce: ${sunPoints}`;
+    killedZombies = 0;
+    gameBoard.innerHTML = '';
+    status.innerHTML = '';
+  }
+
+  function playBackgroundMusic() {
+    backgroundMusic.loop = true;
+    backgroundMusic.play();
+  }
+});
+</script>
+</body>
+</html>
